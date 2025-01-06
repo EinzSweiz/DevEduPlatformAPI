@@ -46,3 +46,4 @@ requests
 # Testing
 pytest
 pytest-mock
+pytest-django

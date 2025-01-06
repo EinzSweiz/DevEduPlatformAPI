@@ -98,6 +98,37 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS512",
 }
 
+# ==========================
+# DJANGO REST
+# ==========================
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_HTTPONLY': False,
+    # 'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    # 'REFRESH_TOKEN_LIFETIME': timedelta(days=3)
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',    
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '1000/day',
+        'anon': '100/hour',
+        'login': '10/minute',
+    },
+}
+
+
+# =======================
+#        DOMAINS
+# =======================
+
 
 # ==========================
 # MIDDLEWARE
