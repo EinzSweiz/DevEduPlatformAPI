@@ -1,0 +1,48 @@
+# Core
+django
+python-decouple
+psycopg2-binary
+
+# Authentication
+dj-rest-auth
+django-allauth
+djangorestframework-simplejwt
+social-auth-core
+
+# API and CORS
+djangorestframework
+django-cors-headers
+
+# Async tasks
+celery
+django-celery-beat
+django-celery-results
+redis
+django-redis
+
+# WebSockets
+channels
+daphne
+channels-redis
+
+# File handling and PDFs
+pillow
+reportlab
+
+# Payments
+stripe
+
+# Monitoring and Logging
+boto3
+watchtower
+sentry-sdk[django]
+
+# API Documentation
+drf-yasg
+
+# Utilities
+requests
+
+# Testing
+pytest
+pytest-mock
