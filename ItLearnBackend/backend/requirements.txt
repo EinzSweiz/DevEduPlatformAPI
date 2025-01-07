@@ -2,6 +2,10 @@
 django
 python-decouple
 psycopg2-binary
+gunicorn
+
+#Static
+whitenoise
 
 # Authentication
 dj-rest-auth

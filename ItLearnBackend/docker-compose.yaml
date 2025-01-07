@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  web:
+    build: ./backend
+    command: sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8015 --log-level debug"
+    volumes:
+      - ./backend:/usr/src/backend
+    ports:
+    - "8015:8015"
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+    networks:
+      - config
+
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgresuser
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=djangodb
+    networks:
+      - config
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - config  #redis service to the backend network
+    restart: unless-stopped
+    volumes:
+    - redis_data:/data
+    
+  celery:
+    build:
+      context: ./backend
+    container_name: celery
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - ./backend:/usr/src/backend
+      - celery_volume:/usr/src/backend/celery
+    depends_on:
+      - redis
+    user: "1000:1000"
+    group_add:
+      - 1000
+    env_file:
+      - ./.env
+    networks:
+      - config  # Attach celery service to the backend network
+  
+  celery_beat:
+    build:
+      context: ./backend
+    container_name: celery_beat
+    command: celery -A config beat --loglevel=info
+    volumes:
+      - ./backend:/usr/src/backend
+      - celery_beat_volume:/usr/src/backend/celery_beat
+    depends_on:
+      - redis
+      - celery
+    user: "1000:1000"
+    group_add:
+      - 1000
+    env_file:
+      - ./.env
+    networks:
+      - config  # Attach celery_beat service to the backend network
+
+volumes:
+  postgres_data:
+  redis_data:
+  celery_volume:  # Added volume for celery
+  celery_beat_volume:  # Added volume for celery_beat
+  
+
+networks:
+  config:
+    driver: bridge

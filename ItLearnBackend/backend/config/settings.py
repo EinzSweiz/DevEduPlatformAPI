@@ -38,6 +38,7 @@ SECRET_KEY = config('SECRET_KEY', cast=str, default=None)
 DEBUG = config('DEBUG', cast=bool, default=False)
 ALLOWED_HOSTS = ['localhost', '127.0.0.1',]
 
+
 # ==========================
 # INSTALLED APPS
 # ==========================
@@ -135,6 +136,7 @@ REST_FRAMEWORK = {
 # ==========================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
@@ -176,10 +178,10 @@ TEMPLATES = [
 ]
 
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+# ==========================
+# DATABASE
+# ==========================
 
-# Default database settings
 DATABASES = {}
 
 # Use SQLite for tests
@@ -211,6 +213,32 @@ else:
         }
     }
 
+# ==========================
+# CELERY
+# ==========================
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', cast=str, default='django-db')
+CELERY_BROKER_URL = config('CELERY_BROKER_REDIS_URL', cast=str, default='redis://localhost:6379')
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
+CELERY_BEAT_SCHEDULER_MAX_INTERVAL = 60
+
+broker_transport_options = {
+    'retry_on_timeout': True,
+    'max_retries': 5,
+    'interval_start': 0,   # Start retry delay immediately
+    'interval_step': 0.2,  # Step-up delay between retries
+    'interval_max': 0.5,   # Maximum delay between retries
+}
+CELERY_WORKER_CONCURRENCY = 4  # Limit the number of concurrent worker threads (adjust as needed)
+
+# Soft and hard task time limits
+CELERY_TASK_SOFT_TIME_LIMIT = 300  # Abort task gracefully after 5 minutes
+CELERY_TASK_TIME_LIMIT = 360  # Hard limit of 6 minutes
+
+# Prefetch multiplier to control the number of tasks a worker prefetches
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Prevent worker from prefetching too many tasks
+
+CELERY_TASK_IGNORE_RESULT = True  # Set to True if results are not needed
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -237,7 +265,11 @@ STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 #=====================================================
 

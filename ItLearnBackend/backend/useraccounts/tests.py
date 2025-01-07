@@ -1,7 +1,5 @@
 import pytest
 from unittest.mock import patch
-from rest_framework.exceptions import ValidationError
-from useraccounts.models import User
 from rest_framework.test import APIClient
 from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
