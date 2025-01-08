@@ -5,6 +5,13 @@ from rest_framework.response import Response
 import logging
 from django.contrib.auth.tokens import default_token_generator
 from allauth.account.models import EmailAddress
+from .tasks import send_reset_email
+from django.shortcuts import get_object_or_404
+from django.conf import settings
+from django.utils.encoding import force_bytes
+from .serializers import PasswordResetSerializer, SetPasswordSerializer
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework import status
 from .models import User
 
@@ -69,4 +76,55 @@ class CustomLoginAPI(LoginView):
             raise e
         except Exception as e:
             logger.error(f"Unexpected error during login: {e}")
-            raise AuthenticationFailed("An unexpected error occurred during login. Please try again.")
+            raise AuthenticationFailed('Unable to log in with provided credentials.')
+
+
+class CustomPasswordResetAPI(APIView):
+    authentication_classes = []
+    permission_classes = []
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        email = serializer.validated_data['email']
+
+        user = get_object_or_404(User, email=email)
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))  # Generate UID
+        token = PasswordResetTokenGenerator().make_token(user)  # Generate Token
+
+        reset_url = f'{settings.FRONTEND_URL}/password/reset/{uid}/{token}/'
+
+        send_reset_email.delay(email, reset_url)
+        
+        return Response({"message": "Password reset email sent successfully"}, status=status.HTTP_200_OK)
+    
+
+
+class CustomPasswordResetConfirmAPI(APIView):
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, uidb64, token):
+        try:
+            # Decode the UID to get the user ID
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, User.DoesNotExist):
+            return Response({"error": "Invalid token or UID."}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        token_generator = PasswordResetTokenGenerator()
+        if not token_generator.check_token(user, token):
+            return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = SetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            # Set the new password
+            user.set_password(serializer.validated_data["new_password1"])
+            user.save()
+            return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        

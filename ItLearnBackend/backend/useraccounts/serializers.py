@@ -3,6 +3,7 @@ from .models import User
 import logging
 from rest_framework.exceptions import ValidationError
 from dj_rest_auth.registration.serializers import RegisterSerializer
+from django.contrib.auth.password_validation import validate_password
 from .tasks import send_confirmation_message
 
 logger = logging.getLogger(__name__)
@@ -49,3 +50,22 @@ class CustomRegisterSerializer(RegisterSerializer):
         except Exception as e:
             logger.error(f"Unexpected error during registration: {e}")
             raise ValidationError("An unexpected error occurred. Please try again later.")
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    new_password1 = serializers.CharField(write_only=True)
+    new_password2 = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        password1 = attrs.get("new_password1")  # Correct field name
+        password2 = attrs.get("new_password2")  # Correct field name
+
+        if password1 != password2:
+            raise serializers.ValidationError("Passwords do not match.")
+        
+        validate_password(password1)
+        return attrs

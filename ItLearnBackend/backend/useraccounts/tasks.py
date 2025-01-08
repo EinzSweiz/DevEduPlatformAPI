@@ -25,3 +25,41 @@ def send_confirmation_message(user_id):
         send_message(subject, message, 'riad.sultanov.1999@gmail.com', user.email)
     except Exception as e:
         logger.log(f"Error sending confirmation email: {e}")
+
+    
+
+
+
+@shared_task
+def send_reset_email(email, reset_url):
+    subject = "Reset Your Password - http://localhost:3000"
+    
+    # HTML version of the email message
+    message = f"""
+    <html>
+    <body>
+        <h2>Password Reset Request</h2>
+        <p>Hello,</p>
+        <p>We received a request to reset your password for your account associated with this email address.</p>
+        <p>You can reset your password by clicking the link below:</p>
+        <a href="{reset_url}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+        <p>If you did not request this, no further action is required. However, we recommend that you secure your account if you suspect any unauthorized access.</p>
+        <p>This link will expire in 24 hours.</p>
+        <p>Thank you for using our service.</p>
+        <p>Best regards,</p>
+        <p>The Your App Name Team</p>
+        <p><a href="mailto:support@diplomaroad.com">support@diplomaroad.com</a></p>
+    </body>
+    </html>
+    """
+    
+    from_email = "riad.sultanov.1999@gmail.com"
+    
+    # Send the email with HTML content
+    send_message(
+        subject,          # Subject of the email
+        '',               # Plain text message (leave empty since we are sending HTML)
+        from_email,       # Sender email address
+        email,          # Recipient email address
+        html_message=message  # HTML version of the message
+    )
