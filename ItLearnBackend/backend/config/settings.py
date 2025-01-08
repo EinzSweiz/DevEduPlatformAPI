@@ -155,7 +155,25 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.wsgi.application'
-WEBSITE_URL = ' http://127.0.0.1:8013/'
+WEBSITE_URL = 'http://127.0.0.1:8015/'
+FRONTEND_URL = 'http://localhost:3000'
+CORS_ALLOW_CREDENTIALS=True
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:8015',
+]
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8015', 
+    'http://localhost:3000',
+
+]
+CORS_ORIGINS_WHITELIST = [
+    'http://127.0.0.1:8015', 
+    'http://localhost:3000',
+
+]
+
 
 # =======================
 # DJANGO TEMPLATES

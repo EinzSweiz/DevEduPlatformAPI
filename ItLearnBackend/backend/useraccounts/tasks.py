@@ -24,4 +24,4 @@ def send_confirmation_message(user_id):
         
         send_message(subject, message, 'riad.sultanov.1999@gmail.com', user.email)
     except Exception as e:
-        logger.error(f"Error sending confirmation email: {e}")
+        logger.log(f"Error sending confirmation email: {e}")
