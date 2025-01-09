@@ -8,6 +8,28 @@ from .tasks import send_confirmation_message
 
 logger = logging.getLogger(__name__)
 
+class UserModelDynamicSerializer(serializers.ModelSerializer):
+    avatar = serializers.ImageField(required=False)
+    avatar_url = serializers.SerializerMethodField()
+    def __init__(self, *args, **kwargs):
+        fields = kwargs.pop('fields', None)
+        super().__init__(*args, **kwargs)
+
+        if fields is not None:
+            allowed = set(fields)
+            existing = set(self.fields)
+            for field_name in existing - allowed:
+                self.fields.pop(field_name)
+                
+    def get_avatar_url(self, obj):
+        return obj.avatar_url()
+
+    class Meta:
+        model = User
+        fields = '__all__'
+        read_only_fields = ['email', 'subscription_plan', 'subscription_start_date', 'subscription_end_date', 'is_subscription_active']
+
+        
 class CustomRegisterSerializer(RegisterSerializer):
     name = serializers.CharField(max_length=255)
     avatar = serializers.ImageField(required=False)

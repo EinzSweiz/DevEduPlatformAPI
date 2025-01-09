@@ -9,17 +9,31 @@ from .tasks import send_reset_email
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.utils.encoding import force_bytes
-from .serializers import PasswordResetSerializer, SetPasswordSerializer
+from .serializers import PasswordResetSerializer, SetPasswordSerializer, UserModelDynamicSerializer
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework import status
+from .swagger_usecases import email_param, password_reset_params, profile_update_params, profile_schema, password_reset_schema
 from .models import User
+from .mixins import ParserMixinAPI
 
 logger = logging.getLogger(__name__)
 
 class ConfirmEmailView(APIView):
     authentication_classes = []
     permission_classes = []
+
+    @swagger_auto_schema(
+        operation_description="Confirm a user's email with the provided token and user ID.",
+        responses={
+            200: openapi.Response("Email confirmed successfully"),
+            400: openapi.Response("Invalid or expired token"),
+            404: openapi.Response("User not found"),
+        },
+    )
     def get(self, request, user_id, token):
         try:
             # Verify user exists
@@ -79,9 +93,17 @@ class CustomLoginAPI(LoginView):
             raise AuthenticationFailed('Unable to log in with provided credentials.')
 
 
-class CustomPasswordResetAPI(APIView):
+class CustomPasswordResetAPI(ParserMixinAPI, APIView):
     authentication_classes = []
     permission_classes = []
+    @swagger_auto_schema(
+        manual_parameters=email_param,
+        responses={
+            200: openapi.Response("Password reset email sent successfully."),
+            400: "Invalid data",
+            404: "User not found",
+        },
+    )
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
 
@@ -103,11 +125,15 @@ class CustomPasswordResetAPI(APIView):
     
 
 
-class CustomPasswordResetConfirmAPI(APIView):
+class CustomPasswordResetConfirmAPI(ParserMixinAPI, APIView):
 
     authentication_classes = []
     permission_classes = []
 
+    @swagger_auto_schema(
+        manual_parameters=password_reset_params,
+        responses={200: password_reset_schema, 401: 'Invalid token or UID', 400: 'Error happened'}
+    )
     def post(self, request, uidb64, token):
         try:
             # Decode the UID to get the user ID
@@ -128,3 +154,46 @@ class CustomPasswordResetConfirmAPI(APIView):
             return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
+
+class ProfileDetailViewAPI(ParserMixinAPI, APIView):
+    FIELDS = [
+        'email', 'name', 'avatar', 'avatar_url', 'bio', 'location',
+        'phone_number', 'linkedin', 'github', 'subscription_plan',
+        'subscription_start_date', 'subscription_end_date',
+        'is_subscription_active',
+    ]
+
+
+    @swagger_auto_schema(
+        operation_description="Retrieve user profile details.",
+        responses={200: profile_schema, 401: "Not authenticated"}
+    )
+    def get(self, request):
+        user = request.user
+        if not request.user:
+            return Response({'error': "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        serializer = UserModelDynamicSerializer(user, fields=self.FIELDS)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_description="Update user profile details.",
+        manual_parameters=profile_update_params,  # Use the reusable parameters for profile update
+        responses={200: profile_schema, 400: "Invalid data"}
+    )
+    def put(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({"error": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        serializer = UserModelDynamicSerializer(
+            user,
+            data=request.data,
+            partial=True,
+            fields=self.FIELDS,
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

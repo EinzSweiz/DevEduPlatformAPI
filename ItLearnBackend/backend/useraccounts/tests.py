@@ -124,7 +124,7 @@ def test_password_reset(
 
 
 @pytest.mark.django_db
-def test_password_reset_confirm(api_client: APIClient,create_user):
+def test_password_reset_confirm(api_client: APIClient, create_user):
     user = create_user
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = PasswordResetTokenGenerator().make_token(user)
@@ -144,3 +144,34 @@ def test_password_reset_confirm(api_client: APIClient,create_user):
     # Verify the password was updated
     user.refresh_from_db()
     assert user.check_password("CNX2023Posejdon")
+
+
+
+@pytest.mark.django_db
+def test_profile_detail_view(api_client: APIClient, create_user):
+    user = create_user
+    api_client.force_authenticate(user=user)
+    response = api_client.get('/api/user/accounts/profile/detail/')
+
+    assert response.status_code == 200
+
+    data = response.data
+
+    assert data['name'] == "Test User"
+    assert data['email'] == user.email
+    assert data['avatar'] is None
+    assert data['avatar_url'] == ''
+    assert data['is_subscription_active'] is False
+
+@pytest.mark.django_db
+def test_profile_detail_update(api_client: APIClient, create_user):
+    user = create_user
+    api_client.force_authenticate(user=user)
+
+    payload = {'name': 'Updated Name'}
+
+    response = api_client.put('/api/user/accounts/profile/detail/', data=payload)
+
+    assert response.status_code == 200
+
+    assert response.data['name'] == 'Updated Name'

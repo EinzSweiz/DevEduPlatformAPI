@@ -32,7 +32,7 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - config  #redis service to the backend network
+      - config
     restart: unless-stopped
     volumes:
     - redis_data:/data
