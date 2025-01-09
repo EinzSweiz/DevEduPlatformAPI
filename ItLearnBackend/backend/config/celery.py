@@ -9,6 +9,11 @@ logger = logging.getLogger(__name__)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 app = Celery('config')
+app.conf.update(
+     broker_transport_options={
+        'transport': '.kafka_transport.KafkaTransport'
+     }
+)
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

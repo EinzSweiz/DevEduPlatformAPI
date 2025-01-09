@@ -48,7 +48,7 @@ def send_reset_email(email, reset_url):
         <p>Thank you for using our service.</p>
         <p>Best regards,</p>
         <p>The Your App Name Team</p>
-        <p><a href="mailto:support@diplomaroad.com">support@diplomaroad.com</a></p>
+        <p><a href="mailto:support@coursesIT.com">support@coursesIT.com</a></p>
     </body>
     </html>
     """

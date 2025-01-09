@@ -3,7 +3,7 @@ version: '3.8'
 services:
   web:
     build: ./backend
-    command: sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8015 --log-level debug"
+    command: sh -c "python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8015 --log-level debug"
     volumes:
       - ./backend:/usr/src/backend
     ports:
@@ -47,9 +47,8 @@ services:
       - celery_volume:/usr/src/backend/celery
     depends_on:
       - redis
-    user: "1000:1000"
-    group_add:
-      - 1000
+      - kafka
+    # user: "celeryuser"
     env_file:
       - ./.env
     networks:
@@ -66,13 +65,44 @@ services:
     depends_on:
       - redis
       - celery
-    user: "1000:1000"
-    group_add:
-      - 1000
+    # user: "celeryuser"
     env_file:
       - ./.env
     networks:
       - config  # Attach celery_beat service to the backend network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - config
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_LOG_RETENTION_HOURS: 168            # Retain messages for 7 days
+      KAFKA_LOG_RETENTION_BYTES: 1073741824     # 1GB per partition
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824       # Segment size (1GB)
+      KAFKA_LOG_CLEANUP_POLICY: delete          # Default cleanup policy
+      KAFKA_DELETE_RETENTION_MS: 86400000       # Retain delete markers for 24 hours
+      KAFKA_LOG_MESSAGE_TIMESTAMP_TYPE: CreateTime  # Use message creation time for retention
+
+    networks:
+      - config
 
 volumes:
   postgres_data:

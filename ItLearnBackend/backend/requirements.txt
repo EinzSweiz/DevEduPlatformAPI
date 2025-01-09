@@ -23,6 +23,9 @@ django-celery-beat
 django-celery-results
 redis
 django-redis
+kafka-python
+confluent-kafka
+kombu
 
 # WebSockets
 channels
