@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     build: ./backend
@@ -36,7 +34,17 @@ services:
     restart: unless-stopped
     volumes:
     - redis_data:/data
-    
+  
+  redis-exporter:
+    image: oliver006/redis_exporter
+    container_name: redis-exporter
+    ports:
+      - "9121:9121"  # Redis Exporter exposes metrics here
+    environment:
+      REDIS_ADDR: redis:6379  # Connect Redis Exporter to Redis
+    networks:
+      - config
+
   celery:
     build:
       context: ./backend
@@ -53,7 +61,18 @@ services:
       - ./.env
     networks:
       - config  # Attach celery service to the backend network
-  
+
+  # celery-exporter:
+  #   image: richardjkendall/celery-exporter
+  #   container_name: celery-exporter
+  #   ports:
+  #     - "9101:9101"  # Celery Exporter exposes metrics here
+  #   environment:
+  #     - CELERY_BROKER_URL=kafka://kafka:9092
+  #   networks:
+  #     - config
+
+    
   celery_beat:
     build:
       context: ./backend
@@ -93,7 +112,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_LOG_RETENTION_HOURS: 168            # Retain messages for 7 days
       KAFKA_LOG_RETENTION_BYTES: 1073741824     # 1GB per partition
       KAFKA_LOG_SEGMENT_BYTES: 1073741824       # Segment size (1GB)
@@ -101,6 +120,45 @@ services:
       KAFKA_DELETE_RETENTION_MS: 86400000       # Retain delete markers for 24 hours
       KAFKA_LOG_MESSAGE_TIMESTAMP_TYPE: CreateTime  # Use message creation time for retention
 
+    networks:
+      - config
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter
+    container_name: kafka-exporter
+    ports:
+      - "9308:9308"  # Kafka Exporter exposes metrics here
+    environment:
+      KAFKA_SERVER: kafka:9092  # Connect to Kafka broker
+    networks:
+      - config
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - config
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3001:3000"
+    networks:
+      - config
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
     networks:
       - config
 

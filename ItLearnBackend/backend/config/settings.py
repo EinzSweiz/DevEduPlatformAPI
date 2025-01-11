@@ -36,7 +36,7 @@ if all([ADMIN_USER_NAME, ADMIN_USER_EMAIL]):
 # ==========================
 SECRET_KEY = config('SECRET_KEY', cast=str, default=None)
 DEBUG = config('DEBUG', cast=bool, default=False)
-ALLOWED_HOSTS = ['localhost', '127.0.0.1',]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'web']
 
 
 # ==========================
@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     'channels',
     'drf_yasg',
+    'django_prometheus',
 
     #custom apps
     'useraccounts'
@@ -135,6 +136,7 @@ REST_FRAMEWORK = {
 # MIDDLEWARE
 # ==========================
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -146,6 +148,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # External middleware
     'allauth.account.middleware.AccountMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 # ==========================

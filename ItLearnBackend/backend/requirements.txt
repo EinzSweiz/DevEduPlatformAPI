@@ -19,6 +19,7 @@ django-cors-headers
 
 # Async tasks
 celery
+flower
 django-celery-beat
 django-celery-results
 redis
@@ -54,3 +55,7 @@ requests
 pytest
 pytest-mock
 pytest-django
+
+
+#Prometheus Grafna
+django-prometheus
