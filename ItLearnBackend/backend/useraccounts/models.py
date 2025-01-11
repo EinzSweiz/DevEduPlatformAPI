@@ -66,6 +66,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def save(self, *args, **kwargs):
         if not self.role:
             self.role = self.RoleChoises.USER
+        if self.linkedin and not self.linkedin.startswith(('http://', 'https://')):
+            self.linkedin = f'https://{self.linkedin}'
+        if self.github and not self.github.startswith(('http://', 'https://')):
+            self.github = f'https://{self.github}'
         super().save(*args, **kwargs)
 
     def avatar_url(self):

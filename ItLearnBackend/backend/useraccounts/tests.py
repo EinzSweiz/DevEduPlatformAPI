@@ -86,6 +86,7 @@ def test_login_user(api_client: APIClient, create_user):
     assert response.status_code == 200
     assert 'access' in response.data
     assert 'refresh' in response.data
+    assert 'is_deleted' in response.data
 
 
 @pytest.mark.django_db

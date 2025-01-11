@@ -155,7 +155,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.wsgi.application'
-WEBSITE_URL = 'http://127.0.0.1:8015/'
+WEBSITE_URL = 'http://127.0.0.1:8015'
 FRONTEND_URL = 'http://localhost:3000'
 CORS_ALLOW_CREDENTIALS=True
 
@@ -280,14 +280,20 @@ AUTH_PASSWORD_VALIDATORS = [
 # STATIC AND MEDIA FILES
 # ==========================
 STATIC_URL = '/static/'
-MEDIA_URL = '/media/'
+MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",  # For media files
+        "LOCATION": "media/",  # Ensure this matches your MEDIA_ROOT
+    },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",  # For static files
     },
 }
+
 
 #=====================================================
 

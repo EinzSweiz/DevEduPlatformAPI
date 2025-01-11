@@ -85,7 +85,9 @@ class CustomLoginAPI(LoginView):
             user = self.user
             if not user.is_verified:
                 raise AuthenticationFailed("E-mail is not verified.")
-            return response
+            data = response.data
+            data['is_deleted'] = user.is_deleted
+            return Response(data)
         except AuthenticationFailed as e:
             raise e
         except Exception as e:
@@ -160,7 +162,7 @@ class ProfileDetailViewAPI(ParserMixinAPI, APIView):
         'email', 'name', 'avatar', 'avatar_url', 'bio', 'location',
         'phone_number', 'linkedin', 'github', 'subscription_plan',
         'subscription_start_date', 'subscription_end_date',
-        'is_subscription_active',
+        'is_subscription_active', 'is_deleted',
     ]
 
 
