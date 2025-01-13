@@ -74,7 +74,8 @@ INSTALLED_APPS = [
     'django_prometheus',
 
     #custom apps
-    'useraccounts'
+    'useraccounts',
+    'courses',
 ]
 
 # ==========================

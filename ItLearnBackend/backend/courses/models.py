@@ -1,19 +1,48 @@
 from django.db import models
 from useraccounts.models import User
 from datetime import timezone
+from django.core.exceptions import ValidationError
+
+
+class CourseManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_published=True)
 
 class Course(models.Model):
+    CATEGORY_CHOICES = [
+        ('Programming', 'Programming'),
+        ('Data Science', 'Data Science'),
+        ('Design', 'Design'),
+        ('Marketing', 'Marketing'),
+        ('Business', 'Business'),
+    ]
     title = models.CharField(max_length=255)
     description = models.TextField()
-    category = models.CharField(max_length=100)
+    category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
     instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='instructed_courses')
     created_at =  models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_published = models.BooleanField(default=True)
     
+
+    objects = CourseManager()
+    all_objects = models.Manager()
+     # Metrics
+    # enrolled_students = models.PositiveIntegerField(default=0)  # Number of enrolled students
+    # total_views = models.PositiveIntegerField(default=0)        # Total views of the course
+    # average_rating = models.FloatField(default=0.0)            # Average rating for the course
+    
     def __str__(self):
         return self.title
     
+    def soft_delete(self):
+        self.is_published = False
+        self.save()
+
+    def soft_revovery(self):
+        self.is_published = True
+        self.save()
+
 class Video(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='videos')
     title = models.CharField(max_length=255)
