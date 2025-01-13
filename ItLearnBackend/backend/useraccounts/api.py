@@ -5,7 +5,7 @@ from rest_framework.response import Response
 import logging
 from django.contrib.auth.tokens import default_token_generator
 from allauth.account.models import EmailAddress
-from .tasks import send_reset_email
+from .tasks import send_reset_email, send_useraccount_changes_message
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.utils.encoding import force_bytes
@@ -20,7 +20,7 @@ from .swagger_usecases import email_param, password_reset_params, profile_update
 from .models import User
 from .mixins import ParserMixinAPI
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('default')
 
 class ConfirmEmailView(APIView):
     authentication_classes = []
@@ -35,46 +35,27 @@ class ConfirmEmailView(APIView):
         },
     )
     def get(self, request, user_id, token):
+        logger.info(f"Email confirmation requested for user_id={user_id}")
         try:
-            # Verify user exists
             user = User.objects.get(pk=user_id)
-
-            # Check if the token is valid
             if not default_token_generator.check_token(user, token):
-                return Response(
-                    {"error": "Invalid or expired token"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                logger.warning(f"Invalid token for user_id={user_id}")
+                return Response({"error": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Activate the user and mark the email as verified
+            # Mark email as verified
             user.is_active = True
             user.is_verified = True
             user.save()
+            logger.info(f"Email verified for user_id={user_id}")
 
-            email = EmailAddress.objects.get(user=user)
-            email.verified = True
-            email.save()
-
-            return Response(
-                {"message": "Email confirmed successfully"},
-                status=status.HTTP_200_OK,
-            )
+            return Response({"message": "Email confirmed successfully"}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
-            return Response(
-                {"error": "User not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        except EmailAddress.DoesNotExist:
-            return Response(
-                {"error": "Email address not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            logger.error(f"User not found: user_id={user_id}")
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            logger.error(f"Unexpected error during email confirmation: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomLoginAPI(LoginView):
     authentication_classes = []
@@ -184,10 +165,11 @@ class ProfileDetailViewAPI(ParserMixinAPI, APIView):
         responses={200: profile_schema, 400: "Invalid data"}
     )
     def put(self, request):
+        logger.info("Testing CloudWatch log from the put method.")
         user = request.user
         if not user.is_authenticated:
             return Response({"error": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
-
+        
         serializer = UserModelDynamicSerializer(
             user,
             data=request.data,
@@ -197,5 +179,6 @@ class ProfileDetailViewAPI(ParserMixinAPI, APIView):
 
         if serializer.is_valid():
             serializer.save()
+            send_useraccount_changes_message.delay(user.id)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
