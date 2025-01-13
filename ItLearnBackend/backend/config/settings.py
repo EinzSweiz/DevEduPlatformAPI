@@ -316,55 +316,55 @@ logger_boto3_client = boto3.client(
 )
 CLOUDWATCH_DEFAULT_LOG_STREAM_NAME = f"app-log-stream-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
-# LOGGING = {
-#     'version': 1,
-#     'disable_existing_loggers': False,
-#     'formatters': {
-#         'default': {
-#             'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
-#             'datefmt': '%Y-%m-%d %H:%M:%S',
-#         },
-#     },
-#     'handlers': {
-#         'file': {
-#             'level': 'INFO',
-#             'class': 'logging.FileHandler',
-#             'filename': '/usr/src/backend/logs/coursesapp.log',
-#             'formatter': 'default',
-#         },
-#         'cloudwatch': {
-#             'level': 'INFO',  # Send only INFO and above to CloudWatch
-#             'class': 'watchtower.CloudWatchLogHandler',
-#             'boto3_client': logger_boto3_client,
-#             'log_group': '/courses-it-logs-group',
-#             'stream_name': 'manual-test-log-stream',
-#             'formatter': 'default',
-#             'send_interval': 0,
-#         },
-#         'console': {
-#             'level': 'INFO',  # Show only warnings and above in the console
-#             'class': 'logging.StreamHandler',
-#             'formatter': 'default',
-#         },
-#     },
-#     'loggers': {
-#         'default': {
-#             'handlers': ['file', 'cloudwatch', 'console'],  # Log to all handlers
-#             'level': 'INFO',
-#             'propagate': False,
-#         },
-#         'django': {
-#             'handlers': ['file', 'cloudwatch', 'console'],
-#             'level': 'INFO',
-#             'propagate': False,
-#         },
-#         'botocore': {
-#             'handlers': ['file'],
-#             'level': 'WARNING',
-#             'propagate': False,
-#         },
-#     },
-# }
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': '/usr/src/backend/logs/coursesapp.log',
+            'formatter': 'default',
+        },
+        'cloudwatch': {
+            'level': 'INFO',  # Send only INFO and above to CloudWatch
+            'class': 'watchtower.CloudWatchLogHandler',
+            'boto3_client': logger_boto3_client,
+            'log_group': '/courses-it-logs-group',
+            'stream_name': 'manual-test-log-stream',
+            'formatter': 'default',
+            'send_interval': 0,
+        },
+        'console': {
+            'level': 'INFO',  # Show only warnings and above in the console
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
+        },
+    },
+    'loggers': {
+        'default': {
+            'handlers': ['file', 'cloudwatch', 'console'],  # Log to all handlers
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['file', 'cloudwatch', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'botocore': {
+            'handlers': ['file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
 logging.getLogger('default').info('This is a test error log for CloudWatch!')
 
 #=====================================================

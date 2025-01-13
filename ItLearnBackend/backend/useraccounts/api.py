@@ -153,9 +153,6 @@ class ProfileDetailViewAPI(ParserMixinAPI, APIView):
     )
     def get(self, request):
         user = request.user
-        if not request.user:
-            return Response({'error': "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
-        
         serializer = UserModelDynamicSerializer(user, fields=self.FIELDS)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -165,11 +162,8 @@ class ProfileDetailViewAPI(ParserMixinAPI, APIView):
         responses={200: profile_schema, 400: "Invalid data"}
     )
     def put(self, request):
-        logger.info("Testing CloudWatch log from the put method.")
         user = request.user
-        if not user.is_authenticated:
-            return Response({"error": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
-        
+
         serializer = UserModelDynamicSerializer(
             user,
             data=request.data,
