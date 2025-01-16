@@ -4,17 +4,18 @@ from rest_framework.generics import RetrieveAPIView
 from .serializers import CourseDynamicSerializer
 from core.messages import COURSE_MESSAGES
 from rest_framework.response import Response
+from useraccounts.mixins import ParserMixinAPI
 from rest_framework import status
 
 
-class CourseAPI(APIView):
+class CourseAPI(ParserMixinAPI, APIView):
     def post(self, request):
         data = request.data
-        serializer = CourseDynamicSerializer(data=data, fields=['title', 'description', 'category', 'instructor'])
+        serializer = CourseDynamicSerializer(data=data, fields=['title', 'description', 'category', 'instructor', 'preview_image', 'preview_video'])
 
         if serializer.is_valid():
             course = serializer.save(instructor=request.user)
-            return Response({'success': COURSE_MESSAGES['create_success']}, status=status.HTTP_201_CREATED)
+            return Response({'success': COURSE_MESSAGES['create_success'], 'course': CourseDynamicSerializer(course).data,}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):

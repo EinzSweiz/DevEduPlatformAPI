@@ -2,6 +2,7 @@ from django.db import models
 from useraccounts.models import User
 from datetime import timezone
 from django.core.exceptions import ValidationError
+from django.conf import settings
 
 
 class CourseManager(models.Manager):
@@ -23,6 +24,10 @@ class Course(models.Model):
     created_at =  models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_published = models.BooleanField(default=True)
+
+    preview_image = models.ImageField(upload_to='uploads/course_previews', null=True, blank=True, help_text="Preview image for the course.")
+    preview_video = models.FileField(upload_to='uploads/course_videos', null=True, blank=True, help_text="Introductory video for the course.")
+    
     
 
     objects = CourseManager()
@@ -42,6 +47,16 @@ class Course(models.Model):
     def soft_revovery(self):
         self.is_published = True
         self.save()
+    
+    def course_preview_image_url(self):
+        if self.preview_image:
+            return f'{settings.WEBSITE_URL}{self.preview_image.url}'
+        return ''
+    
+    def course_preview_video_url(self):
+        if self.preview_video:
+            return f'{settings.WEBSITE_URL}{self.preview_video.url}'
+        return ''
 
 class Video(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='videos')
