@@ -6,6 +6,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework.permissions import AllowAny
 from courses import urls as courses_urls
+from my_stripe import urls as stripe_urls
 from django.conf import settings
 from useraccounts import urls as useraccounts_urls
 
@@ -28,6 +29,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/user/accounts/', include(useraccounts_urls)),
     path('api/courses/', include(courses_urls)),
+    path('api/stripe/', include(stripe_urls)),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

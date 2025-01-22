@@ -76,6 +76,8 @@ INSTALLED_APPS = [
     #custom apps
     'useraccounts',
     'courses',
+    'my_stripe',
+    'payments',
 ]
 
 # ==========================

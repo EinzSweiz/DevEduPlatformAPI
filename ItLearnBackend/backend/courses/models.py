@@ -2,6 +2,7 @@ from django.db import models
 from useraccounts.models import User
 from datetime import timezone
 from django.core.exceptions import ValidationError
+import uuid
 from django.conf import settings
 
 
@@ -20,6 +21,7 @@ class Course(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField()
     category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
+    price = models.DecimalField(max_digits=6, decimal_places=2)
     instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='instructed_courses')
     created_at =  models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -57,6 +59,16 @@ class Course(models.Model):
         if self.preview_video:
             return f'{settings.WEBSITE_URL}{self.preview_video.url}'
         return ''
+    
+class CourseEnrollment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4(), editable=False)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    total_price = models.FloatField()
+    stripe_checkout_id = models.CharField(max_length=255, null=True, blank=True)
+    has_paid = models.BooleanField(default=False)
+    created_at = models.DateField(auto_now_add=True)
+
 
 class Video(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='videos')

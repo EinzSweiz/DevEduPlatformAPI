@@ -1,10 +1,11 @@
 import pytest
-from .models import Course
+from .models import Course, CourseEnrollment
 from useraccounts.models import User
 from useraccounts.conftest import create_user
 from io import BytesIO
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
+from unittest.mock import Mock
 
 @pytest.fixture
 def create_course(db, create_user):
@@ -25,8 +26,21 @@ def create_course(db, create_user):
         title="Test Course",
         description="This is a test course description.",
         category="Test Category",
-        instructor=user,
         preview_image=preview_image,
-        preview_video=preview_video
+        instructor=user,
+        preview_video=preview_video,
+        price=29.99,
     )
     return course
+
+
+@pytest.fixture
+def create_course_enrollment(db, create_course, create_user):
+    course = create_course
+    course_enrollment = CourseEnrollment.objects.create(
+        created_by = course.instructor,
+        course = course,
+        total_price = course.price,
+        stripe_checkout_id = Mock(return_value='mock_checkout_id')(),
+    )
+    return course_enrollment
