@@ -14,9 +14,8 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework import status
-from .swagger_usecases import email_param, password_reset_params, profile_update_params, profile_schema, password_reset_schema
+from .swagger_usecases import email_schema, login_request_body, login_responses, profile_update_params, profile_schema, password_reset_schema
 from .models import User
 from .mixins import ParserMixinAPI
 
@@ -46,6 +45,10 @@ class ConfirmEmailView(APIView):
             user.is_active = True
             user.is_verified = True
             user.save()
+
+            email = EmailAddress.objects.get(user=user)
+            email.verified = True
+            email.save()
             logger.info(f"Email verified for user_id={user_id}")
 
             return Response({"message": "Email confirmed successfully"}, status=status.HTTP_200_OK)
@@ -60,6 +63,13 @@ class ConfirmEmailView(APIView):
 class CustomLoginAPI(LoginView):
     authentication_classes = []
     permission_classes = []
+    
+
+    @swagger_auto_schema(
+        operation_description="User login endpoint",
+        request_body=login_request_body,
+        responses=login_responses,
+    )
     def post(self, request, *args, **kwargs):
         try:
             response = super().post(request, *args, **kwargs)
@@ -76,15 +86,17 @@ class CustomLoginAPI(LoginView):
             raise AuthenticationFailed('Unable to log in with provided credentials.')
 
 
-class CustomPasswordResetAPI(ParserMixinAPI, APIView):
+class CustomPasswordResetAPI(APIView):
     authentication_classes = []
     permission_classes = []
+
     @swagger_auto_schema(
-        manual_parameters=email_param,
+        operation_description="Send password reset email (JSON format).",
+        request_body=email_schema,  # Use the reusable schema for JSON input
         responses={
             200: openapi.Response("Password reset email sent successfully."),
-            400: "Invalid data",
-            404: "User not found",
+            400: openapi.Response("Invalid data"),
+            404: openapi.Response("User not found"),
         },
     )
     def post(self, request):
@@ -108,14 +120,18 @@ class CustomPasswordResetAPI(ParserMixinAPI, APIView):
     
 
 
-class CustomPasswordResetConfirmAPI(ParserMixinAPI, APIView):
-
+class CustomPasswordResetConfirmAPI(APIView):
     authentication_classes = []
     permission_classes = []
 
     @swagger_auto_schema(
-        manual_parameters=password_reset_params,
-        responses={200: password_reset_schema, 401: 'Invalid token or UID', 400: 'Error happened'}
+        operation_description="Reset the password using a token and UID (JSON format).",
+        request_body=password_reset_schema,  # Use the reusable schema for JSON input
+        responses={
+            200: openapi.Response("Password reset successfully.", schema=password_reset_schema),
+            401: openapi.Response("Invalid token or UID"),
+            400: openapi.Response("Invalid data"),
+        },
     )
     def post(self, request, uidb64, token):
         try:

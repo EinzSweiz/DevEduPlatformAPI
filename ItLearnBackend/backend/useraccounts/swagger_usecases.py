@@ -1,5 +1,32 @@
 from drf_yasg import openapi
 
+login_request_body = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        'username': openapi.Schema(type=openapi.TYPE_STRING, description='Username'),
+        'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email', format='email'),
+        'password': openapi.Schema(type=openapi.TYPE_STRING, description='Password', format='password'),
+    },
+    required=['username', 'password'],  # Define required fields
+)
+
+login_responses = {
+    200: openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'access': openapi.Schema(type=openapi.TYPE_STRING, description='Access token'),
+            'refresh': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh token'),
+            'is_deleted': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indicates if the user is deleted'),
+        },
+    ),
+    401: openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Error message'),
+        },
+    ),
+}
+
 # Reusable Schema Components
 email_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,

@@ -132,6 +132,8 @@ services:
       KAFKA_SERVER: kafka:9092  # Connect to Kafka broker
     networks:
       - config
+    depends_on:
+      - kafka
 
   prometheus:
     image: prom/prometheus:latest
