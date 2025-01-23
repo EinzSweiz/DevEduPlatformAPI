@@ -6,62 +6,95 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 import logging
 from courses.models import Course, CourseEnrollment
+from decouple import config
+from .swagger_usecases import payment_success_schema, payment_cancel_schema
 from .models import Subscription
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 logger = logging.getLogger('default')
 
-
-class CheckoutSessionCreate(APIView):
-    def post(self, request, *args, **kwargs):
-        logger.info("Starting CheckoutSessionCreate API call")
-        course_id = request.data.get('course_id')
-        if not course_id:
-            logger.warning("Course ID is missing in request")
-            return Response({'error': 'Course ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+class CheckoutSessionAPI:
+    @staticmethod
+    def create_checkout_session(event_type, user_id, course_id=None):
+        logger.info(f"Starting CheckoutSessionAPI call for event_type: {event_type}")
 
         try:
-            course = Course.objects.get(id=course_id)
-            logger.info(f"Fetched course with ID: {course_id}")
+            if event_type == "payment":
+                # Ensure course_id is provided
+                if not course_id:
+                    logger.warning("Course ID is missing")
+                    raise ValueError("Course ID is required for payment sessions.")
 
-            session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                mode='payment',
-                line_items=[
-                    {
-                        'price_data': {
-                            'currency': 'usd',
-                            'product_data': {
-                                'name': course.title,
-                                'description': course.description,
+                course = Course.objects.get(id=course_id)
+                logger.info(f"Fetched course with ID: {course_id}")
+
+                session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    mode='payment',
+                    line_items=[
+                        {
+                            'price_data': {
+                                'currency': 'usd',
+                                'product_data': {
+                                    'name': course.title,
+                                    'description': course.description,
+                                },
+                                'unit_amount': int(float(course.price) * 100),
                             },
-                            'unit_amount': int(float(course.price) * 100),
-                        },
-                        'quantity': 1,
-                    }
-                ],
-                metadata={
-                    'course_id': course.id,
-                    'user_id': request.user.id,
-                    'total_price': course.price,
-                },
-                customer_creation='always',
-                success_url=settings.FRONTEND_URL + "/payment-success?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url=f"{settings.FRONTEND_URL}/payment-cancel",
-            )
-            logger.info(f"Stripe session created successfully: {session.id}")
-            return Response({'checkout_url': session.url}, status=status.HTTP_200_OK)
+                            'quantity': 1,
+                        }
+                    ],
+                    metadata={
+                        'course_id': course.id,
+                        'user_id': user_id,
+                        'total_price': course.price,
+                    },
+                    customer_creation='always',
+                    success_url=settings.FRONTEND_URL + "/payment-success?session_id={CHECKOUT_SESSION_ID}",
+                    cancel_url=f"{settings.FRONTEND_URL}/payment-cancel",
+                )
+                logger.info(f"Stripe payment session created successfully: {session.id}")
+                return session.url
+
+            elif event_type == "subscription":
+                price_id = config('price_id', cast=str, default=None)
+
+                if not price_id:
+                    logger.warning("Price ID is missing")
+                    raise ValueError("Price ID is required for subscription sessions.")
+
+                session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    mode='subscription',
+                    line_items=[
+                        {
+                            "price": price_id,
+                            "quantity": 1,
+                        }
+                    ],
+                    metadata={
+                        "user_id": user_id,
+                    },
+                    success_url=settings.FRONTEND_URL + "/payment-success?session_id={CHECKOUT_SESSION_ID}",
+                    cancel_url=f"{settings.FRONTEND_URL}/payment-cancel",
+                )
+                logger.info(f"Stripe subscription session created successfully: {session.id}")
+                return session.url
+
+            else:
+                logger.error(f"Invalid event_type provided: {event_type}")
+                raise ValueError("Invalid event_type. Supported types: 'payment', 'subscription'.")
 
         except Course.DoesNotExist:
             logger.error(f"Course with ID {course_id} not found or not published")
-            return Response({'error': 'Course not found or not published'}, status=status.HTTP_404_NOT_FOUND)
+            raise ValueError("Course not found or not published")
         except stripe.error.StripeError as e:
             logger.error(f"Stripe API error: {e}")
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            raise RuntimeError(f"Stripe API error: {e}")
 
 class PaymentSuccessAPI(APIView):
+    @payment_success_schema
     def get(self, request):
         logger.info("Starting PaymentSuccessAPI call")
         checkout_session_id = request.GET.get("session_id")
@@ -138,44 +171,12 @@ class PaymentSuccessAPI(APIView):
 
 
 class PaymentCancel(APIView):
+    @payment_cancel_schema
     def get(self, request, pk):
         logger.info(f"Starting PaymentCancel API call for enrollment ID: {pk}")
         enrollment = get_object_or_404(CourseEnrollment, pk=pk)
         logger.info(f"Payment cancellation processed for enrollment ID: {pk}")
         return Response({'error': f'Payment for reservation {enrollment.id} was canceled.'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class SubscriptionCheckoutSessionCreate(APIView):
-    def post(self, request, *args, **kwargs):
-        logger.info("Starting SubscriptionCheckoutSessionCreate API call")
-        price_id = request.data.get("price_id")
-
-        if not price_id:
-            logger.warning("Price ID is missing in request")
-            return Response({"error": "Price ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                mode='subscription',
-                line_items=[
-                    {
-                        "price": price_id,
-                        "quantity": 1,
-                    }
-                ],
-                metadata={
-                    "user_id": request.user.id,
-                },
-                success_url=settings.FRONTEND_URL + "/payment-success?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url=f"{settings.FRONTEND_URL}/payment-cancel",
-            )
-            logger.info(f"Stripe subscription session created successfully: {session.id}")
-            return Response({"checkout_url": session.url}, status=status.HTTP_200_OK)
-        except stripe.error.StripeError as e:
-            logger.error(f"Stripe API error in subscription session creation: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class StripeWebhook(APIView):
     def post(self, request):
